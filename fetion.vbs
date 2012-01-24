@@ -1,9 +1,27 @@
 '----------------------------------------------------------------------
 ' *********************************************************************
 ' * Abstract:
+' *    Send Fetion Message via Fetion WAP website
 ' *
-' * prncnfg.vbs - printer configuration script for WMI on Windows used to get
-' *    and set printer configuration also used to rename a printer
+' * Usage:
+' *      fetion  [-u account] [-p password]
+' *              [-r receiver] [-m message]
+' *              [--send=enable|disable]
+' *              [--type=SMS|default]
+' *              [--login=enable|disable]
+' *              [--logout=enable|disable]
+' *              [--echo=enable|disable]
+' * Parameters:
+' *   -u       - Sender account's phone number
+' *   -p       - Sender account's password
+' *   -r       - Receiver phone number
+' *   -m       - Message text
+' *   --send   - Use send features
+' *   --type   - Use send type
+' *   --login  - Login platform
+' *   --logout - Logout platform
+' *   --echo   - Echo on screen
+' *
 ' * Author  :
 ' *    Wang Ye <pcn88 at hotmail.com>
 ' * Date    :
