@@ -65,6 +65,7 @@ Const L_Message_SendSMS_Succeeded_Text = "+Send SMS to '%1' succeeded!"
 Const L_Message_SendMsg_Failed_Text = "-Send to '%1' failed!"
 Const L_Message_SendMsg_Succeeded_Text = "+Send to '%1' succeeded!"
 Const L_Message_Display_OnScreen_Text = "Message : %1 (0x%2)"
+Const L_Message_PhoneNumber_Invalid_Text = "-Phone number '%1' invalid!"
 Const L_Argument_SendPhoneNumber_Name = "u"
 Const L_Argument_SendPassword_Name = "p"
 Const L_Argument_ReceivePhoneNumber_Name = "r"
@@ -149,6 +150,8 @@ Class UriParser
     End Function
 End Class
 
+' // Thanks Demon
+' // See http://demon.tw/my-work/vbsfetion.html
 Class FetionMessager
     Private BASE_URI
     Private INDEX_DIR
@@ -258,7 +261,8 @@ Class FetionMessager
             Dim contentType
             Call request(INDEX_DIR, Null, "GET")
             contentType = http.getResponseHeader("Content-Type")
-            
+            regex.IgnoreCase = True
+            regex.Global = False
             regex.Pattern = "^[\w\/\.]+; charset=(.+)$"
             If regex.Test(contentType) Then
                Dim matches
@@ -379,6 +383,8 @@ Class FetionMessager
         Dim content
         content = post(SEARCH_SUBMIT_DIR, buildSearchTextParameters(mobile))
         If http.status = 200 Then
+            regex.IgnoreCase = True
+            regex.Global = True
             regex.Pattern = "/toinputMsg\.action\?touserid=(\d+)"
             If regex.Test(content) Then
                 Dim matches
@@ -387,6 +393,13 @@ Class FetionMessager
                 Set matches = Nothing
             End If
         End If
+    End Function
+    
+    Public Function isMobilePhoneNumberValid(mobile)
+        regex.IgnoreCase = True
+        regex.Global = False
+        regex.Pattern = "^1[3|4|5|8]\d{9}$"
+        isMobilePhoneNumberValid = regex.Test(mobile)
     End Function
     
     Public Property Get StatusCode()
@@ -801,6 +814,13 @@ Function VBMain()
     If (objCommandLineParser.hasArgument(L_Argument_DisplayHelp_Name)) Then
         Call Usage()
     End If
+    
+    If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
+        VBMain = 5
+        LineOut L_Message_PhoneNumber_Invalid_Text, SendPhoneNumber
+        Exit Function
+    End If
+    
     If bool(hasLogin) Then
         If Not objFetionMessager.login(SendPhoneNumber, SendPassword) Then
             VBMain = objFetionMessager.StatusCode
@@ -813,7 +833,8 @@ Function VBMain()
         DisplayStatusMessage objFetionMessager
     End If
     
-    If bool(hasSend) And (ReceivePhoneNumber = "" Or ReceivePhoneNumber = SendPhoneNumber) Then
+    If bool(hasSend) And (ReceivePhoneNumber = "" Or _
+        ReceivePhoneNumber = SendPhoneNumber) Then
         If Not objFetionMessager.sendMessageToOwn(MessageText) Then
             VBMain = objFetionMessager.StatusCode
             LineOut L_Message_SendToOwn_Failed_Text, SendPhoneNumber
@@ -822,24 +843,29 @@ Function VBMain()
         End If
         DisplayStatusMessage objFetionMessager
     ElseIf bool(hasSend) Then
-      Select Case SendType
-        Case "SMS"
-            If Not objFetionMessager.sendSMS(MessageText, ReceivePhoneNumber) Then
-                VBMain = objFetionMessager.StatusCode
-                LineOut L_Message_SendSMS_Failed_Text, ReceivePhoneNumber
-            Else
-                LineOut L_Message_SendSMS_Succeeded_Text, ReceivePhoneNumber
-            End If
-            DisplayStatusMessage objFetionMessager
-        Case Else
-            If Not objFetionMessager.sendMessage(MessageText, ReceivePhoneNumber) Then
-                VBMain = objFetionMessager.StatusCode
-                LineOut L_Message_SendMsg_Failed_Text, ReceivePhoneNumber
-            Else
-                LineOut L_Message_SendMsg_Succeeded_Text, ReceivePhoneNumber
-            End If
-            DisplayStatusMessage objFetionMessager
-      End Select
+      If objFetionMessager.isMobilePhoneNumberValid(ReceivePhoneNumber) Then
+        Select Case SendType
+            Case "SMS"
+                If Not objFetionMessager.sendSMS(MessageText, ReceivePhoneNumber) Then
+                    VBMain = objFetionMessager.StatusCode
+                    LineOut L_Message_SendSMS_Failed_Text, ReceivePhoneNumber
+                Else
+                    LineOut L_Message_SendSMS_Succeeded_Text, ReceivePhoneNumber
+                End If
+                DisplayStatusMessage objFetionMessager
+            Case Else
+                If Not objFetionMessager.sendMessage(MessageText, ReceivePhoneNumber) Then
+                    VBMain = objFetionMessager.StatusCode
+                    LineOut L_Message_SendMsg_Failed_Text, ReceivePhoneNumber
+                Else
+                    LineOut L_Message_SendMsg_Succeeded_Text, ReceivePhoneNumber
+                End If
+                DisplayStatusMessage objFetionMessager
+        End Select
+      Else
+        VBMain = 5
+        LineOut L_Message_PhoneNumber_Invalid_Text, ReceivePhoneNumber
+      End If
     End If
     
     If bool(hasLogout) Then
