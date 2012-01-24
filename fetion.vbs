@@ -98,59 +98,56 @@ const L_Help_Help_General18_Text = "  --echo   - Echo on screen"
 
 Dim EchoText
 
-'Date: 2010/6/18
-'Author: Demon
-'QQ: 380401911
-'E-mail: still.demon@gmail.com
-'Description: Use VBScript to implement PHP's urlencode function
-
-Function urlencode_ansi(str)
-	Dim i,c,s,length
-	length = Len(str)
-	For i = 1 To length
-		s = Mid(str,i,1)
-		c = Asc(Mid(str,i,1))
-		If ( c >= Asc("A") And c <= Asc("Z") ) Or _
-			( c >= Asc("a") And c <= Asc("z") ) Or _
-			( c >= Asc("0") And c <= Asc("9") ) Or _
-			( c = Asc("-") Or c = Asc("_") Or c = Asc(".") ) Then
-			urlencode_ansi = urlencode_ansi & s
-		ElseIf c = Asc(" ") Then
-			urlencode_ansi = urlencode_ansi & "+"
-		Else
-			urlencode_ansi = urlencode_ansi & "%" & Left(Hex(c),2)
-			urlencode_ansi = urlencode_ansi & "%" & Right(Hex(c),2)			
-		End If
-	Next
-End Function
-
-Function urlencode(str)
-	Dim i,c,s,length
-	length = Len(str)
-	For i = 1 To length
-		s = Mid(str,i,1)
-		c = "&H" & Hex(AscW(Mid(str,i,1)))
-		If ( c >= AscW("A") And c <= AscW("Z") ) Or _
-			( c >= AscW("a") And c <= AscW("z") ) Or _
-			( c >= AscW("0") And c <= AscW("9") ) Or _
-			( c = AscW("-") Or c = AscW("_") Or c = AscW(".") ) Then
-			urlencode = urlencode & s
-		ElseIf c = AscW(" ") Then
-			urlencode = urlencode & "+"
-		Else
-			If c >= &H0001 And c <= &H007F Then
-				urlencode = urlencode & s
-			ElseIf c > &H07FF Then
-				urlencode = urlencode & "%" & Hex(&HE0 Or (c\(2^12) And &H0F))
-				urlencode = urlencode & "%" & Hex(&H80 Or (c\(2^6) And &H3F))
-				urlencode = urlencode & "%" & Hex(&H80 Or (c\(2^0) And &H3F))
-			Else
-				urlencode = urlencode & "%" & Hex(&HC0 Or (c\(2^6) And &H1F))
-				urlencode = urlencode & "%" & Hex(&H80 Or (c\(2^0) And &H3F))
-			End If
-		End If
-	Next
-End Function
+Class UriParser
+    Private Function isUpper(c)
+        isUpper = CBool( Asc(c) >= Asc("A") And Asc(c) <= Asc("Z") )
+    End Function
+    
+    Private Function isLower(c)
+        isLower = CBool( Asc(c) >= Asc("a") And Asc(c) <= Asc("z") )
+    End Function
+    
+    Private Function isAlpha(c)
+        isAlpha = CBool(isUpper(c) Or isLower(c))
+    End Function
+    
+    Private Function isSpace(c)
+        isSpace = CBool(Asc(c) = Asc(" "))
+    End Function
+    
+    ' // Thanks Demon
+    ' // See http://demon.tw/programming/vbs-php-urlencode.html
+    Public Function encode(str, charset)
+        Dim i,c
+        For i = 1 To Len(str)
+            c = Mid(str, i, 1)
+            If isAlpha(c) Or c = "-" Or c = "_" Or c = "." Then
+                encode = encode & c
+            ElseIf isSpace(c) Then
+                encode = encode & "+"
+            Else
+                If UCase(charset) = "UTF-8" Then
+                   Dim s : s = c
+                   c = "&H" & Hex(AscW(c))
+                   If c >= &H0001 And c <= &H007F Then
+                        encode = encode & s
+                   ElseIf c > &H07FF Then
+                        encode = encode & "%" & Hex(&HE0 Or (c\(2^12) And &H0F))
+                        encode = encode & "%" & Hex(&H80 Or (c\(2^6) And &H3F))
+                        encode = encode & "%" & Hex(&H80 Or (c\(2^0) And &H3F))
+                    Else
+                        encode = encode & "%" & Hex(&HC0 Or (c\(2^6) And &H1F))
+                        encode = encode & "%" & Hex(&H80 Or (c\(2^0) And &H3F))
+                    End If
+                Else
+                   c = Asc(c)
+                   encode = encode & "%" & Left(Hex(c),2)
+                   encode = encode & "%" & Right(Hex(c),2)
+                End If
+            End If
+        Next
+    End Function
+End Class
 
 Class FetionMessager
     Private BASE_URI
@@ -193,14 +190,10 @@ Class FetionMessager
     End Sub
     
     Private Function encodeURI(str)
-        Dim charset
-        charset = getContentCharset()
-        If UCase(charset)="UTF-8" Then
-            str = urlencode(str)
-        Else
-            str = urlencode_ansi(str)
-        End If
-        encodeURI = str
+        Dim uri
+        Set uri = New UriParser
+        encodeURI = uri.encode(str, getContentCharset())
+        Set uri = Nothing
     End Function
     
     Private Function buildLoginParameters(mobile, password)
@@ -640,6 +633,10 @@ Function bool(var)
     End If
 End Function
 
+' The following functions vbPrintf and matchPattern based on cmdlib.wsc file
+' This file was distributed via Windows XP, but I cannot found it on
+' Windows Vista or Windows 7, so I cannot call these two functions
+' by CreateObject("Microsoft.CmdLib")
 ' Subroutine which implements normal printf functionality
 '********************************************************************
 '* Sub:     vbPrintf
