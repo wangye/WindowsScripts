@@ -650,6 +650,8 @@ End Function
 ' This file was distributed via Windows XP, but I cannot found it on
 ' Windows Vista or Windows 7, so I cannot call these two functions
 ' by CreateObject("Microsoft.CmdLib")
+
+' # Begin Microsoft.CmdLib
 ' Subroutine which implements normal printf functionality
 '********************************************************************
 '* Sub:     vbPrintf
@@ -758,6 +760,7 @@ Function matchPattern(ByVal strMatchPattern, ByVal strPhrase)
     End If
 
 End Function
+' # End Microsoft.CmdLib
 
 Sub Usage()
     WScript.Echo L_Help_Help_General01_Text & vbCrLf & _
@@ -780,6 +783,79 @@ Sub Usage()
         L_Help_Help_General18_Text
 End Sub
 
+Function SendFetionMessage( _
+        SendPhoneNumber, SendPassword, ReceivePhoneNumber, _
+        MessageText, SendType, hasLogin, hasLogout, hasSend)
+    SendFetionMessage = 0
+    Dim objFetionMessager
+    Set objFetionMessager = New FetionMessager
+    If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
+        SendFetionMessage = 5
+        LineOut L_Message_PhoneNumber_Invalid_Text, SendPhoneNumber
+        Exit Function
+    End If
+    
+    If bool(hasLogin) Then
+        If Not objFetionMessager.login(SendPhoneNumber, SendPassword) Then
+            SendFetionMessage = objFetionMessager.StatusCode
+            LineOut L_Message_Login_Failed_Text, Null
+            DisplayStatusMessage objFetionMessager
+            Exit Function
+        End If
+    
+        LineOut L_Message_Login_Succeeded_Text, Null
+        DisplayStatusMessage objFetionMessager
+    End If
+    
+    If bool(hasSend) And (ReceivePhoneNumber = "" Or _
+        ReceivePhoneNumber = SendPhoneNumber) Then
+        If Not objFetionMessager.sendMessageToOwn(MessageText) Then
+            SendFetionMessage = objFetionMessager.StatusCode
+            LineOut L_Message_SendToOwn_Failed_Text, SendPhoneNumber
+        Else
+            LineOut L_Message_SendToOwn_Succeeded_Text, SendPhoneNumber
+        End If
+        DisplayStatusMessage objFetionMessager
+    ElseIf bool(hasSend) Then
+      If objFetionMessager.isMobilePhoneNumberValid(ReceivePhoneNumber) Then
+        Select Case SendType
+            Case "SMS"
+                If Not objFetionMessager.sendSMS(MessageText, ReceivePhoneNumber) Then
+                    SendFetionMessage = objFetionMessager.StatusCode
+                    LineOut L_Message_SendSMS_Failed_Text, ReceivePhoneNumber
+                Else
+                    LineOut L_Message_SendSMS_Succeeded_Text, ReceivePhoneNumber
+                End If
+                DisplayStatusMessage objFetionMessager
+            Case Else
+                If Not objFetionMessager.sendMessage(MessageText, ReceivePhoneNumber) Then
+                    SendFetionMessage = objFetionMessager.StatusCode
+                    LineOut L_Message_SendMsg_Failed_Text, ReceivePhoneNumber
+                Else
+                    LineOut L_Message_SendMsg_Succeeded_Text, ReceivePhoneNumber
+                End If
+                DisplayStatusMessage objFetionMessager
+        End Select
+      Else
+        SendFetionMessage = 5
+        LineOut L_Message_PhoneNumber_Invalid_Text, ReceivePhoneNumber
+      End If
+    End If
+    
+    If bool(hasLogout) Then
+        If Not objFetionMessager.logout() Then
+            SendFetionMessage = objFetionMessager.StatusCode
+            LineOut L_Message_Logout_Failed_Text, Null
+            DisplayStatusMessage objFetionMessager
+            Exit Function
+        End If
+    
+        LineOut L_Message_Logout_Succeeded_Text, Null
+        DisplayStatusMessage objFetionMessager
+    End If
+    Set objFetionMessager = Nothing
+End Function
+
 Function VBMain()
     VBMain = 0
     
@@ -788,9 +864,8 @@ Function VBMain()
         Exit Function
     End If
     
-    Dim objCommandLineParser, objFetionMessager
+    Dim objCommandLineParser
     Set objCommandLineParser = New CommandLineParser
-    Set objFetionMessager = New FetionMessager
         Call objCommandLineParser.addSplitter(L_Argument_HasLogin_Name, L_Argument_Splitter_Token)
         Call objCommandLineParser.addSplitter(L_Argument_HasLogout_Name, L_Argument_Splitter_Token)
         Call objCommandLineParser.addSplitter(L_Argument_TypeName_Name, L_Argument_Splitter_Token)
@@ -815,71 +890,19 @@ Function VBMain()
         Call Usage()
     End If
     
-    If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
-        VBMain = 5
-        LineOut L_Message_PhoneNumber_Invalid_Text, SendPhoneNumber
-        Exit Function
-    End If
+    Dim i, ReceivePhoneNumbers, LastErrorCode
+    ReceivePhoneNumbers = Split(ReceivePhoneNumber, ",")
     
-    If bool(hasLogin) Then
-        If Not objFetionMessager.login(SendPhoneNumber, SendPassword) Then
-            VBMain = objFetionMessager.StatusCode
-            LineOut L_Message_Login_Failed_Text, Null
-            DisplayStatusMessage objFetionMessager
-            Exit Function
-        End If
+    LastErrorCode = VBMain
+    For i = 0 To UBound(ReceivePhoneNumbers)
+        VBMain = SendFetionMessage( _
+            SendPhoneNumber, SendPassword, ReceivePhoneNumbers(i), _
+            MessageText, SendType, hasLogin, hasLogout, hasSend)
+        If VBMain<>0 Then LastErrorCode = VBMain
+    Next
     
-        LineOut L_Message_Login_Succeeded_Text, Null
-        DisplayStatusMessage objFetionMessager
-    End If
+    VBMain = LastErrorCode
     
-    If bool(hasSend) And (ReceivePhoneNumber = "" Or _
-        ReceivePhoneNumber = SendPhoneNumber) Then
-        If Not objFetionMessager.sendMessageToOwn(MessageText) Then
-            VBMain = objFetionMessager.StatusCode
-            LineOut L_Message_SendToOwn_Failed_Text, SendPhoneNumber
-        Else
-            LineOut L_Message_SendToOwn_Succeeded_Text, SendPhoneNumber
-        End If
-        DisplayStatusMessage objFetionMessager
-    ElseIf bool(hasSend) Then
-      If objFetionMessager.isMobilePhoneNumberValid(ReceivePhoneNumber) Then
-        Select Case SendType
-            Case "SMS"
-                If Not objFetionMessager.sendSMS(MessageText, ReceivePhoneNumber) Then
-                    VBMain = objFetionMessager.StatusCode
-                    LineOut L_Message_SendSMS_Failed_Text, ReceivePhoneNumber
-                Else
-                    LineOut L_Message_SendSMS_Succeeded_Text, ReceivePhoneNumber
-                End If
-                DisplayStatusMessage objFetionMessager
-            Case Else
-                If Not objFetionMessager.sendMessage(MessageText, ReceivePhoneNumber) Then
-                    VBMain = objFetionMessager.StatusCode
-                    LineOut L_Message_SendMsg_Failed_Text, ReceivePhoneNumber
-                Else
-                    LineOut L_Message_SendMsg_Succeeded_Text, ReceivePhoneNumber
-                End If
-                DisplayStatusMessage objFetionMessager
-        End Select
-      Else
-        VBMain = 5
-        LineOut L_Message_PhoneNumber_Invalid_Text, ReceivePhoneNumber
-      End If
-    End If
-    
-    If bool(hasLogout) Then
-        If Not objFetionMessager.logout() Then
-            VBMain = objFetionMessager.StatusCode
-            LineOut L_Message_Logout_Failed_Text, Null
-            DisplayStatusMessage objFetionMessager
-            Exit Function
-        End If
-    
-        LineOut L_Message_Logout_Succeeded_Text, Null
-        DisplayStatusMessage objFetionMessager
-    End If
-    Set objFetionMessager = Nothing
     Set objCommandLineParser = Nothing
 End Function
 
