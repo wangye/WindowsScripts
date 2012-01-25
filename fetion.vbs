@@ -785,28 +785,9 @@ End Sub
 
 Function SendFetionMessage( _
         SendPhoneNumber, SendPassword, ReceivePhoneNumber, _
-        MessageText, SendType, hasLogin, hasLogout, hasSend)
+        MessageText, SendType, hasLogin, hasLogout, hasSend, objFetionMessager)
     SendFetionMessage = 0
-    Dim objFetionMessager
-    Set objFetionMessager = New FetionMessager
-    If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
-        SendFetionMessage = 5
-        LineOut L_Message_PhoneNumber_Invalid_Text, SendPhoneNumber
-        Exit Function
-    End If
-    
-    If bool(hasLogin) Then
-        If Not objFetionMessager.login(SendPhoneNumber, SendPassword) Then
-            SendFetionMessage = objFetionMessager.StatusCode
-            LineOut L_Message_Login_Failed_Text, Null
-            DisplayStatusMessage objFetionMessager
-            Exit Function
-        End If
-    
-        LineOut L_Message_Login_Succeeded_Text, Null
-        DisplayStatusMessage objFetionMessager
-    End If
-    
+
     If bool(hasSend) And (ReceivePhoneNumber = "" Or _
         ReceivePhoneNumber = SendPhoneNumber) Then
         If Not objFetionMessager.sendMessageToOwn(MessageText) Then
@@ -842,18 +823,6 @@ Function SendFetionMessage( _
       End If
     End If
     
-    If bool(hasLogout) Then
-        If Not objFetionMessager.logout() Then
-            SendFetionMessage = objFetionMessager.StatusCode
-            LineOut L_Message_Logout_Failed_Text, Null
-            DisplayStatusMessage objFetionMessager
-            Exit Function
-        End If
-    
-        LineOut L_Message_Logout_Succeeded_Text, Null
-        DisplayStatusMessage objFetionMessager
-    End If
-    Set objFetionMessager = Nothing
 End Function
 
 Function VBMain()
@@ -890,6 +859,26 @@ Function VBMain()
         Call Usage()
     End If
     
+    Dim objFetionMessager
+    Set objFetionMessager = New FetionMessager
+    If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
+        VBMain = 5
+        LineOut L_Message_PhoneNumber_Invalid_Text, SendPhoneNumber
+        Exit Function
+    End If
+    
+    If bool(hasLogin) Then
+        If Not objFetionMessager.login(SendPhoneNumber, SendPassword) Then
+            VBMain = objFetionMessager.StatusCode
+            LineOut L_Message_Login_Failed_Text, Null
+            DisplayStatusMessage objFetionMessager
+            Exit Function
+        End If
+    
+        LineOut L_Message_Login_Succeeded_Text, Null
+        DisplayStatusMessage objFetionMessager
+    End If
+    
     Dim i, ReceivePhoneNumbers, LastErrorCode
     ReceivePhoneNumbers = Split(ReceivePhoneNumber, ",")
     
@@ -897,12 +886,24 @@ Function VBMain()
     For i = 0 To UBound(ReceivePhoneNumbers)
         VBMain = SendFetionMessage( _
             SendPhoneNumber, SendPassword, ReceivePhoneNumbers(i), _
-            MessageText, SendType, hasLogin, hasLogout, hasSend)
+            MessageText, SendType, hasLogin, hasLogout, hasSend, objFetionMessager)
         If VBMain<>0 Then LastErrorCode = VBMain
     Next
+        
+    If bool(hasLogout) Then
+        If Not objFetionMessager.logout() Then
+            VBMain = objFetionMessager.StatusCode
+            LineOut L_Message_Logout_Failed_Text, Null
+            DisplayStatusMessage objFetionMessager
+            Exit Function
+        End If
     
-    VBMain = LastErrorCode
+        LineOut L_Message_Logout_Succeeded_Text, Null
+        DisplayStatusMessage objFetionMessager
+    End If
     
+    If VBMain=0 Then VBMain = LastErrorCode
+    Set objFetionMessager = Nothing
     Set objCommandLineParser = Nothing
 End Function
 
