@@ -355,7 +355,10 @@ Class FetionMessager
             Dim matches
             Set matches = regex.Execute(str)
             send_message = matches.Item(0).Submatches(0)
-            If send_message = "发送成功" Or send_message = "消息会话提示" Then
+            ' send_message = "发送成功" Or send_message = "消息会话提示"
+            ' fix Chinese characters in some platform
+            If StrEqual(send_message, Array(21457, -28671, 25104, 21151)) Or _
+               StrEqual(send_message, Array(28040, 24687, 20250, -29731, 25552, 31034)) Then
                 send_status = True
             Else
                 send_status = False
@@ -393,6 +396,19 @@ Class FetionMessager
                 Set matches = Nothing
             End If
         End If
+    End Function
+    
+    Private Function StrEqual(str, arr)
+        StrEqual = False
+        If Len(str)<>(Ubound(arr)+1) Then
+            Exit Function
+        End If
+        Dim i, n
+        For i = 1 To Len(str)
+            n = AscW(Mid(str, i, 1))
+            If n<>arr(i-1) Then Exit Function
+        Next
+        StrEqual = True
     End Function
     
     Public Function isMobilePhoneNumberValid(mobile)
