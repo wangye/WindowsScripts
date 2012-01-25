@@ -238,6 +238,10 @@ Class FetionMessager
         http.setRequestHeader "X-Forwarded-For", GPRS_WAP_IPADDR
         http.setRequestHeader "Forwarded-For", GPRS_WAP_IPADDR
         http.setRequestHeader "Client_IP", GPRS_WAP_IPADDR
+        http.setRequestHeader "Client-IP", GPRS_WAP_IPADDR
+        http.setRequestHeader "VIA", GPRS_WAP_IPADDR
+        http.setRequestHeader "REMOTE_ADDR", GPRS_WAP_IPADDR
+        http.setRequestHeader "REMOTE-ADDR", GPRS_WAP_IPADDR
         http.setRequestHeader "X-Nokia-MusicShop-Bearer", "GPRS/3G"
         http.setRequestHeader "X-Nokia-MusicShop-Version", "11.0842.9"
         http.setRequestHeader "X-Wap-Profile", "http://nds1.nds.nokia.com/uaprof/Nokia5800d-1r100-3G.xml"
