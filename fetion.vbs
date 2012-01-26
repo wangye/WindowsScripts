@@ -66,6 +66,13 @@ Const L_Message_SendMsg_Failed_Text = "-Send to '%1' failed!"
 Const L_Message_SendMsg_Succeeded_Text = "+Send to '%1' succeeded!"
 Const L_Message_Display_OnScreen_Text = "Message : %1 (0x%2)"
 Const L_Message_PhoneNumber_Invalid_Text = "-Phone number '%1' invalid!"
+Const L_Message_PhoneNumber1_Invalid_Text = "-Phone number invalid!"
+Const L_Message_PhonePassword_Invalid_Text = "-Phone password invalid!"
+Const L_Message_MessageText_Invalid_Text = "-Message invalid!"
+Const L_Message_Enter_SendNumber_Text = "Please enter the send number:"
+Const L_Message_Enter_SendPassword_Text = "Please enter the send password:"
+Const L_Message_Enter_MessageText_Text = "Please enter the message:"
+Const L_Message_Option_Selection_Text = "Do you want continue [Y/n]?"
 Const L_Argument_SendPhoneNumber_Name = "u"
 Const L_Argument_SendPassword_Name = "p"
 Const L_Argument_ReceivePhoneNumber_Name = "r"
@@ -845,6 +852,14 @@ Function SendFetionMessage( _
     
 End Function
 
+Function ShowOptionBox(msg)
+    WScript.StdOut.WriteLine msg
+    WScript.StdOut.Write L_Message_Option_Selection_Text
+    ShowOptionBox = WScript.StdIn.ReadLine
+    If ShowOptionBox = "" Then ShowOptionBox = "Y"
+    ShowOptionBox = CBool(UCase(ShowOptionBox) = "Y")
+End Function
+
 Function VBMain()
     VBMain = 0
     
@@ -878,9 +893,42 @@ Function VBMain()
     If (objCommandLineParser.hasArgument(L_Argument_DisplayHelp_Name)) Then
         Call Usage()
     End If
-    
+
     Dim objFetionMessager
     Set objFetionMessager = New FetionMessager
+    
+    If WScript.Interactive Then
+        Do While Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber)
+            WScript.StdOut.Write L_Message_Enter_SendNumber_Text
+            SendPhoneNumber = WScript.StdIn.ReadLine
+            If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
+                If Not ShowOptionBox(L_Message_PhoneNumber1_Invalid_Text) Then
+                    Exit Do
+                End If
+            End If
+        Loop
+        
+        Do While (SendPassword = "")
+            WScript.StdOut.Write L_Message_Enter_SendPassword_Text
+            SendPassword = WScript.StdIn.ReadLine
+            If SendPassword = "" Then
+                If Not ShowOptionBox(L_Message_PhonePassword_Invalid_Text) Then
+                    Exit Do
+                End If
+            End If
+        Loop
+        
+         Do While (MessageText = "")
+            WScript.StdOut.WriteLine L_Message_Enter_MessageText_Text
+            MessageText = WScript.StdIn.ReadLine
+            If MessageText = "" Then
+                If Not ShowOptionBox(L_Message_MessageText_Invalid_Text) Then
+                    Exit Do
+                End If
+            End If
+         Loop
+    End If
+    
     If Not objFetionMessager.isMobilePhoneNumberValid(SendPhoneNumber) Then
         VBMain = 5
         LineOut L_Message_PhoneNumber_Invalid_Text, SendPhoneNumber
@@ -901,15 +949,21 @@ Function VBMain()
     
     Dim i, ReceivePhoneNumbers, LastErrorCode
     ReceivePhoneNumbers = Split(ReceivePhoneNumber, ",")
-    
     LastErrorCode = VBMain
-    For i = 0 To UBound(ReceivePhoneNumbers)
+    
+    If UBound(ReceivePhoneNumbers) = -1 Then
         VBMain = SendFetionMessage( _
-            SendPhoneNumber, SendPassword, ReceivePhoneNumbers(i), _
-            MessageText, SendType, hasLogin, hasLogout, hasSend, objFetionMessager)
-        If VBMain<>0 Then LastErrorCode = VBMain
-    Next
-        
+                SendPhoneNumber, SendPassword, ReceivePhoneNumber, _
+                MessageText, SendType, hasLogin, hasLogout, hasSend, objFetionMessager)
+    Else
+        For i = 0 To UBound(ReceivePhoneNumbers)
+            VBMain = SendFetionMessage( _
+                SendPhoneNumber, SendPassword, ReceivePhoneNumbers(i), _
+                MessageText, SendType, hasLogin, hasLogout, hasSend, objFetionMessager)
+            If VBMain<>0 Then LastErrorCode = VBMain
+        Next
+    End If
+    
     If bool(hasLogout) Then
         If Not objFetionMessager.logout() Then
             VBMain = objFetionMessager.StatusCode
