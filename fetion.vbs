@@ -80,6 +80,7 @@ Const L_Argument_MessageText_Name = "m"
 Const L_Argument_HasLogin_Name = "login"
 Const L_Argument_HasLogout_Name = "logout"
 Const L_Argument_TypeName_Name = "type"
+Const L_Argument_LoginStatus_Name = "status"
 Const L_Argument_HasSend_Name = "send"
 Const L_Argument_HasEcho_Name = "echo"
 Const L_Argument_DisplayHelp_Name = "help"
@@ -92,17 +93,19 @@ Const L_Help_Help_General04_Text = "             [--send=enable|disable]"
 Const L_Help_Help_General05_Text = "             [--type=SMS|default]"
 Const L_Help_Help_General06_Text = "             [--login=enable|disable]"
 Const L_Help_Help_General07_Text = "             [--logout=enable|disable]"
-Const L_Help_Help_General08_Text = "             [--echo=enable|disable]"
-const L_Help_Help_General09_Text = "Parameters:"
-const L_Help_Help_General10_Text = "  -u       - Sender account's phone number"
-const L_Help_Help_General11_Text = "  -p       - Sender account's password"
-const L_Help_Help_General12_Text = "  -r       - Receiver phone number"
-const L_Help_Help_General13_Text = "  -m       - Message text"
-const L_Help_Help_General14_Text = "  --send   - Use send features"
-const L_Help_Help_General15_Text = "  --type   - Use send type"
-const L_Help_Help_General16_Text = "  --login  - Login platform"
-const L_Help_Help_General17_Text = "  --logout - Logout platform"
-const L_Help_Help_General18_Text = "  --echo   - Echo on screen"
+Const L_Help_Help_General08_Text = "             [--status=online|busy|leave|hidden]"
+Const L_Help_Help_General09_Text = "             [--echo=enable|disable]"
+const L_Help_Help_General10_Text = "Parameters:"
+const L_Help_Help_General11_Text = "  -u       - Sender account's phone number"
+const L_Help_Help_General12_Text = "  -p       - Sender account's password"
+const L_Help_Help_General13_Text = "  -r       - Receiver phone number"
+const L_Help_Help_General14_Text = "  -m       - Message text"
+const L_Help_Help_General15_Text = "  --send   - Use send features"
+const L_Help_Help_General16_Text = "  --type   - Use send type"
+const L_Help_Help_General17_Text = "  --login  - Login platform"
+const L_Help_Help_General18_Text = "  --logout - Logout platform"
+const L_Help_Help_General19_Text = "  --status - Login status"
+const L_Help_Help_General20_Text = "  --echo   - Echo on screen"
 
 Dim EchoText
 
@@ -207,8 +210,8 @@ Class FetionMessager
         Set uri = Nothing
     End Function
     
-    Private Function buildLoginParameters(mobile, password)
-        buildLoginParameters = "m=" & encodeURI(mobile) & "&pass=" & encodeURI(password) & "&loginstatus=4"
+    Private Function buildLoginParameters(mobile, password, status)
+        buildLoginParameters = "m=" & encodeURI(mobile) & "&pass=" & encodeURI(password) & "&loginstatus=" & status
     End Function
     
     Private Function buildMessageParameters(msg)
@@ -253,6 +256,7 @@ Class FetionMessager
         http.setRequestHeader "X-Nokia-MusicShop-Bearer", "GPRS/3G"
         http.setRequestHeader "X-Nokia-MusicShop-Version", "11.0842.9"
         http.setRequestHeader "X-Wap-Profile", "http://nds1.nds.nokia.com/uaprof/Nokia5800d-1r100-3G.xml"
+        http.setRequestHeader "X-Online-Host", Replace(Replace(BASE_URI, "http://", ""), "https://", "")
         
         If Not IsEmpty(request_devid) Then
             http.setRequestHeader "x-up-calling-line-id", request_devid
@@ -295,7 +299,7 @@ Class FetionMessager
     Private Function parseLoginMessage(str)
         On Error Resume Next
         error_occured = False
-        
+
         Dim login_status, login_message
         regex.IgnoreCase = True
         regex.Global = True
@@ -306,10 +310,9 @@ Class FetionMessager
             login_status = True
         Else
             regex.Pattern = "ontimer\=[""']" & _
-                Replace(Replace(INDEX_DIR, "/", "\/"), ".", "\.") & _
-                        ";jsessionid\=.+[^\? \=]\?t\=.+[^""' ][""']"
+                Replace(Replace(INDEX_DIR, "/", "\/"), ".", "\.")
             login_status = regex.Test(str)
-            ' ontimer="/im/login/login.action;jsessionid=
+            ' ontimer="/im/login/login.action
             ' login_status = False
         End If
         regex.Pattern = "timer value\=[""']\d+[""'] *\/>\s*<p>\s*(.+?[^<\s])\s*[^<]<br"
@@ -447,11 +450,11 @@ Class FetionMessager
         hasErrorOccured = error_occured
     End Function
     
-    Public Function login(mobile, password)
+    Public Function login(mobile, password, loginstatus)
         request_devid = mobile
         login = False
         Dim content
-        content = post(LOGIN_SUBMIT_DIR, buildLoginParameters(mobile, password))
+        content = post(LOGIN_SUBMIT_DIR, buildLoginParameters(mobile, password, loginstatus))
         If http.status<>200 Then
             Exit Function
         End If
@@ -804,9 +807,9 @@ Sub Usage()
         L_Help_Help_General05_Text & vbCrLf & _
         L_Help_Help_General06_Text & vbCrLf & _
         L_Help_Help_General07_Text & vbCrLf & _
-        L_Help_Help_General08_Text
-    WScript.Echo L_Help_Help_General09_Text & vbCrLf & _
-        L_Help_Help_General10_Text & vbCrLf & _
+        L_Help_Help_General08_Text & vbCrLf & _
+        L_Help_Help_General09_Text
+    WScript.Echo L_Help_Help_General10_Text & vbCrLf & _
         L_Help_Help_General11_Text & vbCrLf & _
         L_Help_Help_General12_Text & vbCrLf & _
         L_Help_Help_General13_Text & vbCrLf & _
@@ -814,7 +817,9 @@ Sub Usage()
         L_Help_Help_General15_Text & vbCrLf & _
         L_Help_Help_General16_Text & vbCrLf & _
         L_Help_Help_General17_Text & vbCrLf & _
-        L_Help_Help_General18_Text
+        L_Help_Help_General18_Text & vbCrLf & _
+        L_Help_Help_General19_Text & vbCrLf & _
+        L_Help_Help_General20_Text
 End Sub
 
 Function SendFetionMessage( _
@@ -887,7 +892,8 @@ Function VBMain()
         ' objCommandLineParser.dump
         
     Dim SendPhoneNumber, ReceivePhoneNumber, SendPassword, SendType
-    Dim MessageText, hasLogin, hasLogout, hasSend
+    Dim MessageText, hasLogin, hasLogout, hasSend, LoginStatus
+    
     SendPhoneNumber = objCommandLineParser(L_Argument_SendPhoneNumber_Name)
     SendPassword = objCommandLineParser(L_Argument_SendPassword_Name)
     ReceivePhoneNumber = objCommandLineParser(L_Argument_ReceivePhoneNumber_Name)
@@ -897,10 +903,23 @@ Function VBMain()
     SendType = UCase(objCommandLineParser(L_Argument_TypeName_Name))
     hasSend =  objCommandLineParser(L_Argument_HasSend_Name)
     EchoText = bool(objCommandLineParser(L_Argument_HasEcho_Name))
+    LoginStatus = objCommandLineParser(L_Argument_LoginStatus_Name)
+    
     If (objCommandLineParser.hasArgument(L_Argument_DisplayHelp_Name)) Then
         Call Usage()
     End If
-
+    
+    Select Case LCase(LoginStatus)
+        Case "online", "1"
+            LoginStatus = "1"
+        Case "busy", "2"
+            LoginStatus = "2"
+        Case "leave", "3"
+            LoginStatus = "3"
+        Case Else
+            LoginStatus = "4"
+    End Select
+    
     Dim objFetionMessager
     Set objFetionMessager = New FetionMessager
     
@@ -943,7 +962,7 @@ Function VBMain()
     End If
     
     If bool(hasLogin) Then
-        If Not objFetionMessager.login(SendPhoneNumber, SendPassword) Then
+        If Not objFetionMessager.login(SendPhoneNumber, SendPassword, LoginStatus) Then
             VBMain = objFetionMessager.StatusCode
             LineOut L_Message_Login_Failed_Text, Null
             DisplayStatusMessage objFetionMessager
