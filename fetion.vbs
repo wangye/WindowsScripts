@@ -887,6 +887,7 @@ Function VBMain()
         Call objCommandLineParser.addSplitter(L_Argument_TypeName_Name, L_Argument_Splitter_Token)
         Call objCommandLineParser.addSplitter(L_Argument_HasSend_Name, L_Argument_Splitter_Token)
         Call objCommandLineParser.addSplitter(L_Argument_HasEcho_Name, L_Argument_Splitter_Token)
+        Call objCommandLineParser.addSplitter(L_Argument_LoginStatus_Name, L_Argument_Splitter_Token)
         
         Call objCommandLineParser.parse(WScript.Arguments)
         ' objCommandLineParser.dump
