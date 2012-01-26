@@ -170,6 +170,7 @@ Class FetionMessager
     Private SEARCH_SUBMIT_DIR
     Private GPRS_WAP_IPADDR
     
+    Private request_devid
     Private http
     Private content_charset
     Private regex
@@ -187,7 +188,7 @@ Class FetionMessager
         FETION_MYSELF_SUBMIT_DIR = "/im/user/sendMsgToMyselfs.action"
         SMS_SUBMIT_DIR = "/im/chat/sendShortMsg.action"
         SEARCH_SUBMIT_DIR = "/im/index/searchOtherInfoList.action"
-        GPRS_WAP_IPADDR = "10.146.4.25"
+        GPRS_WAP_IPADDR = "10.0.0.172"
         
         status_code = 0
         Set http = WSH.CreateObject("WinHttp.WinHttpRequest.5.1")
@@ -252,6 +253,11 @@ Class FetionMessager
         http.setRequestHeader "X-Nokia-MusicShop-Bearer", "GPRS/3G"
         http.setRequestHeader "X-Nokia-MusicShop-Version", "11.0842.9"
         http.setRequestHeader "X-Wap-Profile", "http://nds1.nds.nokia.com/uaprof/Nokia5800d-1r100-3G.xml"
+        
+        If Not IsEmpty(request_devid) Then
+            http.setRequestHeader "x-up-calling-line-id", request_devid
+            http.setRequestHeader "X-Up-subno", request_devid
+        End If
         
         If method = "POST" Then
             http.setRequestHeader "Content-Type", "application/x-www-form-urlencoded"
@@ -442,6 +448,7 @@ Class FetionMessager
     End Function
     
     Public Function login(mobile, password)
+        request_devid = mobile
         login = False
         Dim content
         content = post(LOGIN_SUBMIT_DIR, buildLoginParameters(mobile, password))
